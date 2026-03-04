@@ -16,11 +16,20 @@ use std::thread;
 ///
 /// Hint: Use `Arc<Mutex<usize>>` as the shared counter.
 pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
-    // TODO: Create Arc<Mutex<usize>> with initial value 0
-    // TODO: Spawn n_threads threads
-    // TODO: In each thread, lock() and increment count_per_thread times
-    // TODO: Join all threads, return final value
-    todo!()
+    let cnt = Arc::new(Mutex::new(0usize));
+    let mut handles = Vec::new();
+    for _ in 0..n_threads {
+        let cnt = cnt.clone();
+        handles.push(thread::spawn(move || {
+            let mut num = cnt.lock().unwrap();
+            *num += count_per_thread;
+        }));
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    let x = *cnt.lock().unwrap();
+    x
 }
 
 /// Add elements to a shared vector concurrently using multiple threads.
@@ -29,10 +38,30 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
 ///
 /// Hint: Use `Arc<Mutex<Vec<usize>>>`.
 pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
-    // TODO: Create Arc<Mutex<Vec<usize>>>
-    // TODO: Each thread pushes its own id
-    // TODO: After joining all threads, sort the result and return
-    todo!()
+    // // TODO: Create Arc<Mutex<Vec<usize>>>
+    // // TODO: Each thread pushes its own id
+    // // TODO: After joining all threads, sort the result and return
+    // todo!()
+    let v = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = Vec::new();
+    for idx in 0..n_threads {
+        let v = v.clone();
+        handles.push(thread::spawn(move || {
+            let mut v = v.lock().unwrap();
+            v.push(idx);
+        }))
+    }
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
+    handles.into_iter().for_each(|handle| handle.join().unwrap());
+
+    (*v.lock().unwrap()).sort();
+    let mut ret = Vec::new();
+    for ele in &(*v.lock().unwrap()) {
+        ret.push(*ele);
+    }
+    ret
 }
 
 #[cfg(test)]

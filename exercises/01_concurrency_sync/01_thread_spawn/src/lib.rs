@@ -274,10 +274,11 @@ pub fn handle_panic(value: i32, should_panic: bool) -> Result<i32, ()> {
             value
         }
     });
-    match handle.join() {
-        Ok(ret) => Ok(ret),
-        Err(_) => Err(()),
-    }
+    Ok(handle.join().map_err(|_| ()) ?)
+    // match handle.join() {
+    //     Ok(ret) => Ok(ret),
+    //     Err(_) => Err(()),
+    // }
 }
 
 #[cfg(test)]
