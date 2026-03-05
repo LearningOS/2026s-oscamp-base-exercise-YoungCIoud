@@ -49,13 +49,18 @@ use std::process::{Command, Stdio};
 /// 3. Call `.output()` to execute the child and obtain its `Output`.
 /// 4. Convert the `stdout` field (a `Vec<u8>`) into a `String`.
 pub fn run_command(program: &str, args: &[&str]) -> String {
-    // TODO: Use Command::new to create process
-    // TODO: Set stdout to Stdio::piped()
-    // TODO: Execute with .output() and get output
-    // TODO: Convert stdout to String and return
-    todo!()
-}
+    // // TODO: Use Command::new to create process
+    // // TODO: Set stdout to Stdio::piped()
+    // // TODO: Execute with .output() and get output
+    // // TODO: Convert stdout to String and return
+    // todo!()
+    let output = Command::new(program)
+        .args(args)
+        .output()
+        .unwrap();
 
+        format!("{}", String::from_utf8_lossy(&output.stdout))
+}
 /// Write data to child process (cat) stdin via pipe and read its stdout output.
 ///
 /// This demonstrates bidirectional pipe communication between parent and child processes.
@@ -84,12 +89,28 @@ pub fn run_command(program: &str, args: &[&str]) -> String {
 /// 5. Read the child's stdout (`child.stdout.take().unwrap().read_to_string(...)`).
 /// 6. Wait for the child to exit with `.wait()` (or rely on drop‑wait).
 pub fn pipe_through_cat(input: &str) -> String {
-    // TODO: Create "cat" command, set stdin and stdout to piped
-    // TODO: Spawn process
-    // TODO: Write input to child process stdin
-    // TODO: Drop stdin to close pipe (otherwise cat won't exit)
-    // TODO: Read output from child process stdout
-    todo!()
+    // // TODO: Create "cat" command, set stdin and stdout to piped
+    // // TODO: Spawn process
+    // // TODO: Write input to child process stdin
+    // // TODO: Drop stdin to close pipe (otherwise cat won't exit)
+    // // TODO: Read output from child process stdout
+    // todo!()
+    let mut handle = Command::new("cat")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    
+    let mut stdin = handle.stdin.take().unwrap();
+    stdin.write_all(input.as_bytes()).unwrap();
+    drop(stdin);
+
+    let mut output = String::new();
+    handle.stdout.take().unwrap().read_to_string(&mut output).unwrap();
+
+    handle.wait().unwrap();
+
+    output
 }
 
 /// Get child process exit code.
@@ -107,10 +128,16 @@ pub fn pipe_through_cat(input: &str) -> String {
 /// 3. Use `.code()` to get the exit code as `Option<i32>`.
 /// 4. If the child terminated normally, return the exit code; otherwise return a default.
 pub fn get_exit_code(command: &str) -> i32 {
-    // TODO: Use Command::new("sh").args(["-c", command])
-    // TODO: Execute and get status
-    // TODO: Return exit code
-    todo!()
+    let status = Command::new("sh")
+        .args(["-c", command])
+        .status()
+        .unwrap();
+
+    if let Some(code) = status.code() {
+        code
+    } else {
+        i32::default()
+    }
 }
 
 /// Execute the given shell command and return its stdout output as a `Result`.
@@ -133,11 +160,17 @@ pub fn get_exit_code(command: &str) -> i32 {
 /// 3. Call `.output()` and propagate any `io::Error`.
 /// 4. Convert `stdout` to `String` with `String::from_utf8`; if that fails, map to an `io::Error`.
 pub fn run_command_with_result(program: &str, args: &[&str]) -> io::Result<String> {
-    // TODO: Use Command::new to create process
-    // TODO: Set stdout to Stdio::piped()
-    // TODO: Execute with .output() and handle Result
-    // TODO: Convert stdout to String with from_utf8, mapping errors to io::Error
-    todo!()
+    // // TODO: Use Command::new to create process
+    // // TODO: Set stdout to Stdio::piped()
+    // // TODO: Execute with .output() and handle Result
+    // // TODO: Convert stdout to String with from_utf8, mapping errors to io::Error
+    // todo!()
+    let stdout = Command::new(program)
+        .args(args)
+        .output()?;
+
+    String::from_utf8(stdout.stdout)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
 }
 
 /// Interact with `grep` via bidirectional pipes, filtering lines that contain a pattern.
@@ -161,13 +194,28 @@ pub fn run_command_with_result(program: &str, args: &[&str]) -> io::Result<Strin
 /// 7. Return the concatenated matching lines as a single `String`.
 ///
 pub fn pipe_through_grep(pattern: &str, input: &str) -> String {
-    // TODO: Create "grep" command with pattern, set stdin and stdout to piped
-    // TODO: Spawn process
-    // TODO: Write input lines to child stdin
-    // TODO: Drop stdin to close pipe
-    // TODO: Read output from child stdout line by line
-    // TODO: Collect and return matching lines
-    todo!()
+    // // TODO: Create "grep" command with pattern, set stdin and stdout to piped
+    // // TODO: Spawn process
+    // // TODO: Write input lines to child stdin
+    // // TODO: Drop stdin to close pipe
+    // // TODO: Read output from child stdout line by line
+    // // TODO: Collect and return matching lines
+    // todo!()
+
+    let mut child = Command::new("grep")
+        .arg(pattern)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    {
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(input.as_bytes()).unwrap();
+    }
+
+    let output = child.wait_with_output().unwrap();
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 #[cfg(test)]
@@ -175,7 +223,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_run_echo() {
+    fn test_run_echo()  {
         let output = run_command("echo", &["hello"]);
         assert_eq!(output.trim(), "hello");
     }

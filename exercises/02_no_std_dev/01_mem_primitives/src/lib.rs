@@ -25,9 +25,14 @@
 /// `dst` and `src` must each point to at least `n` bytes of valid memory.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn my_memcpy(dst: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-    // TODO: Implement memcpy
-    // Hint: read bytes from src one by one and write to dst
-    todo!()
+    let mut d = dst;
+    let mut s = src;
+    for _ in 0..n {
+        d.write_volatile(s.read_volatile());
+        d = d.add(1);
+        s = s.add(1);
+    }
+    dst
 }
 
 /// Set `n` bytes starting at `dst` to the value `c`.
@@ -38,8 +43,12 @@ pub unsafe extern "C" fn my_memcpy(dst: *mut u8, src: *const u8, n: usize) -> *m
 /// `dst` must point to at least `n` bytes of valid writable memory.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn my_memset(dst: *mut u8, c: u8, n: usize) -> *mut u8 {
-    // TODO: Implement memset
-    todo!()
+    let mut d = dst;
+    for _ in 0..n {
+        d.write_volatile(c);
+        d = d.add(1);
+    }
+    dst
 }
 
 /// Copy `n` bytes from `src` to `dst`, correctly handling overlapping memory.
@@ -50,9 +59,18 @@ pub unsafe extern "C" fn my_memset(dst: *mut u8, c: u8, n: usize) -> *mut u8 {
 /// `dst` and `src` must each point to at least `n` bytes of valid memory.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn my_memmove(dst: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-    // TODO: Implement memmove
-    // Hint: when dst > src and regions overlap, copy backwards (from end to start)
-    todo!()
+    if (dst as usize) < (src as usize) {
+        my_memcpy(dst, src, n);
+    } else {
+        let mut d = dst.add(n);
+        let mut s = src.add(n);
+        for _ in 0..n {
+            d = d.sub(1);
+            s = s.sub(1);
+            d.write_volatile(s.read_volatile());
+        }
+    }
+    dst
 }
 
 /// Return the length of a null-terminated byte string, excluding the trailing null.
@@ -61,8 +79,13 @@ pub unsafe extern "C" fn my_memmove(dst: *mut u8, src: *const u8, n: usize) -> *
 /// `s` must point to a valid null-terminated byte string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn my_strlen(s: *const u8) -> usize {
-    // TODO: Implement strlen
-    todo!()
+    let mut len = 0;
+    let mut s = s;
+    while s.read_volatile() != 0 {
+        len += 1;
+        s = s.add(1);
+    }
+    len
 }
 
 /// Compare two null-terminated byte strings.
@@ -76,8 +99,34 @@ pub unsafe extern "C" fn my_strlen(s: *const u8) -> usize {
 /// `s1` and `s2` must each point to a valid null-terminated byte string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn my_strcmp(s1: *const u8, s2: *const u8) -> i32 {
-    // TODO: Implement strcmp
-    todo!()
+    let l1 = my_strlen(s1);
+    let l2 = my_strlen(s2);
+    let l = l1.min(l2);
+
+    let mut p = s1;
+    let mut q = s2;
+    for _ in 0..l {
+        let x = p.read_volatile();
+        let y = q.read_volatile();
+
+        if x < y {
+            return -1;
+        }
+        if x > y {
+            return 1;
+        }
+
+        p = p.add(1);
+        q = q.add(1);
+    }
+
+    if l1 == l2 {
+        0
+    } else if l1 < l2 {
+        -1
+    } else {
+        1
+    }
 }
 
 // ============================================================
