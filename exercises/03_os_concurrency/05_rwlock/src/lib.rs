@@ -64,7 +64,7 @@ impl<T> RwLock<T> {
     pub fn read(&self) -> RwLockReadGuard<'_, T> {
         loop {
             let state = self.state.load(Ordering::Acquire);
-            if (state & !READER_MASK) != 0 || (state | READER_MASK) == READER_MASK {
+            if (state & !READER_MASK) != 0 || (state & READER_MASK) == READER_MASK {
                 core::hint::spin_loop();
             }
 
